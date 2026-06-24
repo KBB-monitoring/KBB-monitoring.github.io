@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Religious Freedom Violations — Indonesia Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap');
+
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --surface-alt: #edecea;
+    --text: #1a1a1a;
+    --text-muted: #6b6560;
+    --accent: #b53520;
+    --accent-light: #e8cbc5;
+    --accent-dark: #8a2818;
+    --blue: #2c5f8a;
+    --amber: #c4851c;
+    --teal: #2a7a6d;
+    --purple: #6b4c9a;
+    --border: #d8d5d0;
+    --radius: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    background: var(--text);
+    color: var(--bg);
+    padding: 2.5rem 2rem 2rem;
+  }
+  header .container { max-width: 1280px; margin: 0 auto; }
+  header .eyebrow {
+    font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--accent-light); margin-bottom: 0.5rem; font-weight: 600;
+  }
+  header h1 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 1.75rem; font-weight: 600; line-height: 1.25; max-width: 600px;
+  }
+  header .subtitle { color: #a09d98; font-size: 0.85rem; margin-top: 0.4rem; }
+  .data-status {
+    display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.75rem;
+    font-size: 0.75rem; color: #a09d98; background: rgba(255,255,255,0.07);
+    padding: 0.3rem 0.7rem; border-radius: 20px;
+  }
+  .data-status .dot { width: 6px; height: 6px; border-radius: 50%; background: #5cb85c; }
+  .data-status.loading .dot { background: var(--amber); animation: pulse 1s infinite; }
+  .data-status.error .dot { background: var(--accent); }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 2rem; }
+
+  .stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem; margin: 1.5rem auto;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.1rem 1.2rem; box-shadow: var(--shadow);
+  }
+  .stat-card .label {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-muted); font-weight: 600;
+  }
+  .stat-card .value {
+    font-family: 'Source Serif 4', Georgia, serif; font-size: 2rem; font-weight: 600;
+    color: var(--accent-dark); margin-top: 0.15rem; line-height: 1.1;
+  }
+  .stat-card .detail { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .grid-full { margin-bottom: 1rem; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .card-header {
+    padding: 1rem 1.2rem 0.6rem; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .card-header h2 { font-size: 0.85rem; font-weight: 600; }
+  .card-header .badge {
+    font-size: 0.7rem; color: var(--text-muted); background: var(--surface-alt);
+    padding: 0.15rem 0.5rem; border-radius: 10px;
+  }
+  .card-body { padding: 1.2rem; }
+  .card-body canvas { max-height: 280px; }
+
+  #map { height: 420px; width: 100%; }
+
+  /* Choropleth legend */
+  .choropleth-legend {
+    background: white; padding: 8px 12px; border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2); font-size: 11px; line-height: 1.6;
+    font-family: 'Inter', sans-serif;
+  }
+  .choropleth-legend .legend-title {
+    font-weight: 600; margin-bottom: 4px; font-size: 11px; color: #333;
+  }
+  .choropleth-legend .legend-row { display: flex; align-items: center; gap: 6px; }
+  .choropleth-legend .legend-swatch {
+    width: 18px; height: 12px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1);
+    flex-shrink: 0;
+  }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  thead { background: var(--surface-alt); position: sticky; top: 0; }
+  th {
+    text-align: left; padding: 0.65rem 0.8rem; font-weight: 600; font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
+    border-bottom: 2px solid var(--border); white-space: nowrap;
+  }
+  td {
+    padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border);
+    max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  tr:hover td { background: #faf9f7; }
+  .tag {
+    display: inline-block; padding: 0.1rem 0.45rem; border-radius: 3px;
+    font-size: 0.7rem; font-weight: 500;
+  }
+  .tag-high { background: #fde2df; color: var(--accent-dark); }
+  .tag-medium { background: #fef3d6; color: #8a6510; }
+  .tag-low { background: #dff0ed; color: #1a5e52; }
+  .tag-verified { background: #dff0ed; color: #1a5e52; }
+  .tag-pending { background: #fef3d6; color: #8a6510; }
+  .tag-unverified { background: #fde2df; color: var(--accent-dark); }
+
+  .setup-section { margin: 2rem auto 3rem; }
+  .setup-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.5rem;
+  }
+  .setup-card h2 {
+    font-family: 'Source Serif 4', Georgia, serif; font-size: 1.15rem; margin-bottom: 0.75rem;
+  }
+  .setup-card p {
+    font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; line-height: 1.6;
+  }
+  .setup-card code {
+    background: var(--surface-alt); padding: 0.15rem 0.4rem; border-radius: 3px;
+    font-size: 0.8rem; color: var(--accent-dark);
+  }
+  .setup-card ol {
+    font-size: 0.85rem; color: var(--text-muted); margin-left: 1.2rem; line-height: 2;
+  }
+
+  footer {
+    text-align: center; padding: 2rem; font-size: 0.75rem; color: var(--text-muted);
+    border-top: 1px solid var(--border); margin-top: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    header h1 { font-size: 1.35rem; }
+    .container { padding: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="eyebrow">Human Rights Monitoring</div>
+    <h1>Religious Freedom Violations in Indonesia</h1>
+    <p class="subtitle">Documented incidents — interactive dashboard</p>
+    <div class="data-status loading" id="dataStatus">
+      <span class="dot"></span>
+      <span id="statusText">Loading data…</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="stats-row" id="statsRow">
+    <div class="stat-card"><div class="label">Total Cases</div><div class="value" id="totalCases">—</div><div class="detail" id="totalCasesDetail"></div></div>
+    <div class="stat-card"><div class="label">Total Victims</div><div class="value" id="totalVictims">—</div><div class="detail" id="totalVictimsDetail"></div></div>
+    <div class="stat-card"><div class="label">Provinces Affected</div><div class="value" id="totalProvinces">—</div><div class="detail" id="totalProvincesDetail"></div></div>
+    <div class="stat-card"><div class="label">Accountability Rate</div><div class="value" id="accountabilityRate">—</div><div class="detail" id="accountabilityDetail"></div></div>
+    <div class="stat-card"><div class="label">State Involvement</div><div class="value" id="stateInvolvement">—</div><div class="detail" id="stateDetail"></div></div>
+  </div>
+
+  <div class="grid-full">
+    <div class="card">
+      <div class="card-header"><h2>Incident Map</h2><span class="badge" id="mapBadge">choropleth by province</span></div>
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><h2>Violations by Type</h2></div>
+      <div class="card-body"><canvas id="violationChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Incidents Over Time</h2></div>
+      <div class="card-body"><canvas id="timelineChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><h2>Primary Perpetrators</h2></div>
+      <div class="card-body"><canvas id="perpetratorChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Religious Identity of Victims</h2></div>
+      <div class="card-body"><canvas id="identityChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-full">
+    <div class="card">
+      <div class="card-header"><h2>Case Register</h2><span class="badge" id="tableBadge">—</span></div>
+      <div class="table-wrap" style="max-height: 480px; overflow-y: auto;">
+        <table>
+          <thead><tr>
+            <th>ID</th><th>Date</th><th>Province</th><th>Location</th><th>Violation</th>
+            <th>Victim Identity</th><th>Victims</th><th>Perpetrator</th><th>Escalation</th><th>Status</th>
+          </tr></thead>
+          <tbody id="caseTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="geodata.js"></script>
+<script>
+// ==========================================================================
+// CONFIGURATION — Replace this URL with your published Google Sheet CSV URL
+// ==========================================================================
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSB1HM8AqMR1mcBt87QwXY8hd4J8qkt50D4cRM-k9JRM13WquOTrvniOuiW9FYr9_9-iy-2tTXkxSru/pub?gid=0&single=true&output=csv';
+
+// Province name normalization: maps various spellings to the GeoJSON names
+const PROVINCE_ALIASES = {
+  'aceh': 'Aceh', 'di. aceh': 'Aceh', 'nanggroe aceh darussalam': 'Aceh',
+  'sumatera utara': 'Sumatera Utara', 'sumut': 'Sumatera Utara',
+  'sumatera barat': 'Sumatera Barat', 'sumbar': 'Sumatera Barat',
+  'riau': 'Riau', 'jambi': 'Jambi',
+  'sumatera selatan': 'Sumatera Selatan', 'sumsel': 'Sumatera Selatan',
+  'bengkulu': 'Bengkulu', 'lampung': 'Lampung',
+  'kepulauan bangka belitung': 'Kepulauan Bangka Belitung', 'babel': 'Kepulauan Bangka Belitung',
+  'kepulauan riau': 'Kepulauan Riau', 'kepri': 'Kepulauan Riau',
+  'dki jakarta': 'DKI Jakarta', 'jakarta': 'DKI Jakarta',
+  'jawa barat': 'Jawa Barat', 'jabar': 'Jawa Barat',
+  'jawa tengah': 'Jawa Tengah', 'jateng': 'Jawa Tengah',
+  'daerah istimewa yogyakarta': 'Daerah Istimewa Yogyakarta', 'di yogyakarta': 'Daerah Istimewa Yogyakarta', 'yogyakarta': 'Daerah Istimewa Yogyakarta', 'diy': 'Daerah Istimewa Yogyakarta',
+  'jawa timur': 'Jawa Timur', 'jatim': 'Jawa Timur',
+  'banten': 'Banten', 'bali': 'Bali',
+  'nusa tenggara barat': 'Nusa Tenggara Barat', 'ntb': 'Nusa Tenggara Barat',
+  'nusa tenggara timur': 'Nusa Tenggara Timur', 'ntt': 'Nusa Tenggara Timur',
+  'kalimantan barat': 'Kalimantan Barat', 'kalbar': 'Kalimantan Barat',
+  'kalimantan tengah': 'Kalimantan Tengah', 'kalteng': 'Kalimantan Tengah',
+  'kalimantan selatan': 'Kalimantan Selatan', 'kalsel': 'Kalimantan Selatan',
+  'kalimantan timur': 'Kalimantan Timur', 'kaltim': 'Kalimantan Timur',
+  'kalimantan utara': 'Kalimantan Utara', 'kaltara': 'Kalimantan Utara',
+  'sulawesi utara': 'Sulawesi Utara', 'sulut': 'Sulawesi Utara',
+  'sulawesi tengah': 'Sulawesi Tengah', 'sulteng': 'Sulawesi Tengah',
+  'sulawesi selatan': 'Sulawesi Selatan', 'sulsel': 'Sulawesi Selatan',
+  'sulawesi tenggara': 'Sulawesi Tenggara', 'sultra': 'Sulawesi Tenggara',
+  'gorontalo': 'Gorontalo',
+  'sulawesi barat': 'Sulawesi Barat', 'sulbar': 'Sulawesi Barat',
+  'maluku': 'Maluku', 'maluku utara': 'Maluku Utara', 'malut': 'Maluku Utara',
+  'papua': 'Papua', 'papua barat': 'Papua Barat',
+  'papua selatan': 'Papua Selatan', 'papua tengah': 'Papua Tengah',
+  'papua pegunungan': 'Papua Pegunungan', 'papua barat daya': 'Papua Barat Daya',
+};
+
+function normalizeProvince(name) {
+  if (!name) return '';
+  const lower = name.trim().toLowerCase();
+  if (PROVINCE_ALIASES[lower]) return PROVINCE_ALIASES[lower];
+  // Title-case fallback
+  return name.trim().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Choropleth color scale (cream → deep red)
+const CHORO_COLORS = ['#f7f0e8','#f5d5c0','#e8a888','#d4764e','#b53520','#8a2818','#5c1a10'];
+function getColor(count, maxCount) {
+  if (!count || count === 0) return '#f0eeea';
+  const ratio = count / maxCount;
+  const idx = Math.min(Math.floor(ratio * (CHORO_COLORS.length - 1)) + 1, CHORO_COLORS.length - 1);
+  return CHORO_COLORS[idx];
+}
+
+// ---- SAMPLE DATA ----
+function generateSampleData() {
+  const violations = ['Place of Worship Attack','Forced Closure','Discrimination','Intimidation','Blasphemy Accusation','Mob Violence','Permit Denial','Forced Conversion','Property Destruction'];
+  const subtypes = ['Arson','Vandalism','Administrative Block','Social Pressure','Physical Assault','Threat','Legal Abuse','Exclusion'];
+  const perpetrators = ['Local Community Group','Religious Hardliner Organization','Local Government Official','Security Forces','Neighborhood Association','Unknown Individuals','Religious Leader','Political Figure'];
+  const identities = ['Ahmadiyya','Shia','Christian (Protestant)','Christian (Catholic)','Buddhist','Hindu','Indigenous Belief','Baha\'i'];
+  const genders = ['Predominantly Male','Predominantly Female','Mixed','Unknown'];
+  const ages = ['Adults','Mixed Ages','Youth','Elderly','Children'];
+  const policeResponses = ['No Action','Investigation Initiated','Mediation Attempted','Arrests Made','Victim Blamed','Report Taken Only'];
+  const escalations = ['High','Medium','Low'];
+  const statuses = ['Verified','Pending Verification','Unverified'];
+  const sources = ['Media Report','NGO Documentation','Victim Testimony','Field Research','Government Report'];
+  const triggers = ['Permit Application','Religious Service','Social Media Post','Inter-community Dispute','Political Rally','Construction Activity','Religious Holiday Observance','Conversion Rumor'];
+  const consequences = ['Displacement','Property Loss','Physical Injury','Psychological Trauma','Loss of Livelihood','Community Segregation','Self-Censorship'];
+
+  // Weighted province list — more incidents in Java and parts of Sumatra/Sulawesi
+  const provinces = [
+    'Jawa Barat','Jawa Barat','Jawa Barat','Jawa Barat',
+    'Jawa Tengah','Jawa Tengah','Jawa Timur','Jawa Timur','Jawa Timur',
+    'DKI Jakarta','DKI Jakarta','Banten','Banten',
+    'Aceh','Aceh','Aceh',
+    'Sumatera Utara','Sumatera Barat',
+    'Sulawesi Selatan','Sulawesi Tengah',
+    'Nusa Tenggara Barat','Nusa Tenggara Timur',
+    'Kalimantan Barat','Kalimantan Timur',
+    'Lampung','Riau','Bali',
+    'Papua','Maluku',
+    'Daerah Istimewa Yogyakarta',
+    'Sulawesi Utara','Gorontalo',
+    'Kepulauan Bangka Belitung',
+  ];
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const cases = [];
+  for (let i = 1; i <= 75; i++) {
+    const province = pick(provinces);
+    const yr = pick([2022,2023,2024,2024,2024,2025,2025]);
+    const mo = String(Math.floor(Math.random()*12)+1).padStart(2,'0');
+    const dy = String(Math.floor(Math.random()*28)+1).padStart(2,'0');
+    cases.push({
+      Case_ID: `KBB-${String(yr).slice(2)}-${String(i).padStart(3,'0')}`,
+      Case_Title: `${pick(violations)} in ${province}`,
+      Incident_Date: `${yr}-${mo}-${dy}`,
+      Province: province,
+      Regency_City: `Kab. Sample ${i}`,
+      District: `Kec. District ${i%12+1}`,
+      Village: `Desa Village ${i%20+1}`,
+      Urban_Rural: pick(['Urban','Rural','Peri-urban']),
+      Victim_Type: pick(['Individual','Community','Institution']),
+      Religious_Identity: pick(identities),
+      Victim_Count: Math.floor(Math.random()*200)+1,
+      Gender_Profile: pick(genders),
+      Age_Group: pick(ages),
+      Disability_Involved: pick(['No','No','No','Yes']),
+      GEDSI_Marker: pick(['None','Gender','Disability','Social Inclusion','Multiple']),
+      Violation_Type: pick(violations),
+      Violation_Subtype: pick(subtypes),
+      Primary_Perpetrator: pick(perpetrators),
+      State_Involvement: pick(['Direct','Indirect','Complicit','None','None']),
+      Trigger_Event: pick(triggers),
+      Consequences: pick(consequences),
+      Police_Response: pick(policeResponses),
+      Investigation_Status: pick(['Open','Closed — No Action','Closed — Resolved','Ongoing']),
+      Accountability_Outcome: pick(['None','None','Partial','Prosecution','Administrative Sanction']),
+      Source_Type: pick(sources),
+      Source_Reliability: pick(['High','Medium','Low']),
+      Triangulation_Status: pick(['Confirmed','Partially Confirmed','Unconfirmed']),
+      Recurring_Perpetrator: pick(['Yes','No','No']),
+      Recurring_Location: pick(['Yes','No','No']),
+      Escalation_Level: pick(escalations),
+      Pattern_Category: pick(['Isolated','Clustered','Systematic','Periodic']),
+      HR_Article_Engaged: pick(['ICCPR Art. 18','UDHR Art. 18','ICCPR Art. 26','UDHR Art. 2','CRC Art. 14']),
+      Case_Summary: `Documented incident targeting ${pick(identities)} community in ${province}.`,
+      Researcher: pick(['Researcher A','Researcher B','Researcher C']),
+      Reviewer: pick(['Reviewer X','Reviewer Y']),
+      Verification_Status: pick(statuses),
+    });
+  }
+  return cases;
+}
+
+// ---- DATA LOADING ----
+async function loadData() {
+  const statusEl = document.getElementById('dataStatus');
+  const statusText = document.getElementById('statusText');
+  if (SHEET_CSV_URL) {
+    try {
+      statusText.textContent = 'Fetching from Google Sheet…';
+      const response = await fetch(SHEET_CSV_URL);
+      const csvText = await response.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+      statusEl.className = 'data-status';
+      statusText.textContent = `Live — ${parsed.data.length} cases from Google Sheet`;
+      return parsed.data;
+    } catch (e) {
+      statusEl.className = 'data-status error';
+      statusText.textContent = 'Failed to load sheet';
+      return [];
+    }
+  } else {
+    statusEl.className = 'data-status error';
+    statusText.textContent = 'No data source configured — add a Google Sheet URL';
+    return [];
+  }
+}
+
+// ---- CHART DEFAULTS ----
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#6b6560';
+Chart.defaults.plugins.legend.display = false;
+const PALETTE = ['#b53520','#2c5f8a','#c4851c','#2a7a6d','#6b4c9a','#d4764e','#3a7ca5','#8b6b3d'];
+
+// ---- RENDER ----
+async function render() {
+  const data = await loadData();
+
+  // Stats
+  document.getElementById('totalCases').textContent = data.length;
+  const totalVictims = data.reduce((s,r) => s + (parseInt(r.Victim_Count)||0), 0);
+  document.getElementById('totalVictims').textContent = totalVictims.toLocaleString();
+  const provinces = [...new Set(data.map(r => normalizeProvince(r.Province)).filter(Boolean))];
+  document.getElementById('totalProvinces').textContent = provinces.length;
+  document.getElementById('totalProvincesDetail').textContent = 'across Indonesia';
+  const accounted = data.filter(r => r.Accountability_Outcome && r.Accountability_Outcome !== 'None').length;
+  document.getElementById('accountabilityRate').textContent = (data.length ? Math.round(accounted/data.length*100) : 0) + '%';
+  document.getElementById('accountabilityDetail').textContent = `${accounted} of ${data.length} cases`;
+  const stateInv = data.filter(r => r.State_Involvement && r.State_Involvement !== 'None').length;
+  document.getElementById('stateInvolvement').textContent = (data.length ? Math.round(stateInv/data.length*100) : 0) + '%';
+  document.getElementById('stateDetail').textContent = `${stateInv} cases with state role`;
+  const dates = data.map(r => r.Incident_Date).filter(Boolean).sort();
+  if (dates.length) document.getElementById('totalCasesDetail').textContent = `${dates[0].slice(0,7)} — ${dates[dates.length-1].slice(0,7)}`;
+  const identityCounts = {};
+  data.forEach(r => { if (r.Religious_Identity) identityCounts[r.Religious_Identity] = (identityCounts[r.Religious_Identity]||0)+1; });
+  const topIdentity = Object.entries(identityCounts).sort((a,b) => b[1]-a[1])[0];
+  if (topIdentity) document.getElementById('totalVictimsDetail').textContent = `Most affected: ${topIdentity[0]}`;
+
+  // ---- CHOROPLETH MAP ----
+  const map = L.map('map', { scrollWheelZoom: false }).setView([-2.5, 118], 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap, © CARTO', maxZoom: 12,
+  }).addTo(map);
+  // Add labels on top layer
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 12, pane: 'overlayPane',
+  }).addTo(map);
+
+  // Aggregate incidents per province
+  const provCounts = {};
+  const provVictims = {};
+  const provViolations = {};
+  data.forEach(r => {
+    const prov = normalizeProvince(r.Province);
+    if (!prov) return;
+    provCounts[prov] = (provCounts[prov]||0) + 1;
+    provVictims[prov] = (provVictims[prov]||0) + (parseInt(r.Victim_Count)||0);
+    if (!provViolations[prov]) provViolations[prov] = {};
+    if (r.Violation_Type) provViolations[prov][r.Violation_Type] = (provViolations[prov][r.Violation_Type]||0) + 1;
+  });
+  const maxCount = Math.max(...Object.values(provCounts), 1);
+
+  // Build a lookup: GeoJSON name → data province name
+  const geoNameMap = {};
+  INDONESIA_GEOJSON.features.forEach(f => {
+    const geoName = f.properties.name; // e.g. "Jawa Barat"
+    geoNameMap[geoName] = geoName;
+  });
+
+  // Style function for GeoJSON layer
+  function style(feature) {
+    const geoName = feature.properties.name;
+    const count = provCounts[geoName] || 0;
+    return {
+      fillColor: getColor(count, maxCount),
+      weight: 1,
+      opacity: 1,
+      color: '#b8b4ae',
+      fillOpacity: 0.85,
+    };
+  }
+
+  function onEachFeature(feature, layer) {
+    const name = feature.properties.name;
+    const count = provCounts[name] || 0;
+    const victims = provVictims[name] || 0;
+    const viols = provViolations[name] || {};
+    const topViols = Object.entries(viols).sort((a,b) => b[1]-a[1]).slice(0,3)
+      .map(v => `${v[0]} (${v[1]})`).join('<br>');
+
+    const popup = `
+      <div style="min-width:170px;font-family:Inter,sans-serif">
+        <strong style="font-size:13px">${name}</strong><br>
+        <span style="color:#b53520;font-weight:600;font-size:18px">${count}</span>
+        <span style="color:#6b6560;font-size:12px"> incident${count!==1?'s':''}</span><br>
+        <span style="color:#6b6560;font-size:12px">${victims.toLocaleString()} victims</span>
+        ${topViols ? `<hr style="margin:6px 0;border:none;border-top:1px solid #e5e5e5"><span style="font-size:11px;color:#6b6560">${topViols}</span>` : ''}
+      </div>`;
+
+    layer.bindPopup(popup);
+    layer.on({
+      mouseover: e => {
+        e.target.setStyle({ weight: 2, color: '#333', fillOpacity: 0.95 });
+        e.target.bringToFront();
+      },
+      mouseout: e => { geojsonLayer.resetStyle(e.target); },
+    });
+  }
+
+  const geojsonLayer = L.geoJSON(INDONESIA_GEOJSON, { style, onEachFeature }).addTo(map);
+
+  // Legend
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = function() {
+    const div = L.DomUtil.create('div', 'choropleth-legend');
+    const step = Math.max(1, Math.ceil(maxCount / (CHORO_COLORS.length - 1)));
+    let html = '<div class="legend-title">Incidents per province</div>';
+    html += `<div class="legend-row"><span class="legend-swatch" style="background:#f0eeea"></span> 0</div>`;
+    for (let i = 1; i < CHORO_COLORS.length; i++) {
+      const lo = (i-1) * step + 1;
+      const hi = i * step;
+      const label = i === CHORO_COLORS.length - 1 ? `${lo}+` : `${lo}–${hi}`;
+      html += `<div class="legend-row"><span class="legend-swatch" style="background:${CHORO_COLORS[i]}"></span> ${label}</div>`;
+    }
+    div.innerHTML = html;
+    return div;
+  };
+  legend.addTo(map);
+  document.getElementById('mapBadge').textContent = `${Object.keys(provCounts).length} provinces with data`;
+
+  // ---- CHARTS ----
+  // Violation types
+  const violCounts = {};
+  data.forEach(r => { if (r.Violation_Type) violCounts[r.Violation_Type] = (violCounts[r.Violation_Type]||0)+1; });
+  const violSorted = Object.entries(violCounts).sort((a,b) => b[1]-a[1]);
+  new Chart(document.getElementById('violationChart'), {
+    type: 'bar',
+    data: { labels: violSorted.map(v=>v[0]), datasets: [{ data: violSorted.map(v=>v[1]), backgroundColor: PALETTE[0], borderRadius: 3, barThickness: 22 }] },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, scales: { x:{grid:{color:'#eee'},ticks:{stepSize:1}}, y:{grid:{display:false}} } }
+  });
+
+  // Timeline
+  const monthly = {};
+  data.forEach(r => { if (r.Incident_Date) { const m = r.Incident_Date.slice(0,7); monthly[m]=(monthly[m]||0)+1; }});
+  const monthKeys = Object.keys(monthly).sort();
+  new Chart(document.getElementById('timelineChart'), {
+    type: 'line',
+    data: { labels: monthKeys, datasets: [{ data: monthKeys.map(k=>monthly[k]), borderColor:PALETTE[1], backgroundColor:'rgba(44,95,138,0.08)', fill:true, tension:0.35, pointRadius:3, pointBackgroundColor:PALETTE[1] }] },
+    options: { responsive:true, maintainAspectRatio:false, scales: { x:{grid:{display:false},ticks:{maxTicksLimit:8}}, y:{grid:{color:'#eee'},beginAtZero:true,ticks:{stepSize:1}} } }
+  });
+
+  // Perpetrators
+  const perpCounts = {};
+  data.forEach(r => { if (r.Primary_Perpetrator) perpCounts[r.Primary_Perpetrator]=(perpCounts[r.Primary_Perpetrator]||0)+1; });
+  const perpSorted = Object.entries(perpCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  new Chart(document.getElementById('perpetratorChart'), {
+    type: 'bar',
+    data: { labels: perpSorted.map(v=>v[0]), datasets: [{ data: perpSorted.map(v=>v[1]), backgroundColor: PALETTE.slice(0,perpSorted.length), borderRadius:3, barThickness:22 }] },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, scales: { x:{grid:{color:'#eee'},ticks:{stepSize:1}}, y:{grid:{display:false}} } }
+  });
+
+  // Religious identity doughnut
+  const idSorted = Object.entries(identityCounts).sort((a,b)=>b[1]-a[1]);
+  new Chart(document.getElementById('identityChart'), {
+    type: 'doughnut',
+    data: { labels: idSorted.map(v=>v[0]), datasets: [{ data: idSorted.map(v=>v[1]), backgroundColor: PALETTE.slice(0,idSorted.length), borderWidth:1, borderColor:'#fff' }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:true,position:'right',labels:{boxWidth:12,padding:10,font:{size:11}}}}, cutout:'55%' }
+  });
+
+  // ---- TABLE ----
+  const tbody = document.getElementById('caseTable');
+  const escTag = l => `<span class="tag tag-${l.toLowerCase()}">${l}</span>`;
+  const stTag = s => {
+    const c = s==='Verified'?'verified':s==='Pending Verification'?'pending':'unverified';
+    return `<span class="tag tag-${c}">${s}</span>`;
+  };
+  data.sort((a,b)=>(b.Incident_Date||'').localeCompare(a.Incident_Date||'')).forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${r.Case_ID||'—'}</strong></td><td>${r.Incident_Date||'—'}</td>
+      <td>${r.Province||'—'}</td><td title="${r.Regency_City||''}, ${r.District||''}">${r.Regency_City||'—'}</td>
+      <td title="${r.Violation_Subtype||''}">${r.Violation_Type||'—'}</td>
+      <td>${r.Religious_Identity||'—'}</td><td>${r.Victim_Count||'—'}</td>
+      <td>${r.Primary_Perpetrator||'—'}</td>
+      <td>${r.Escalation_Level?escTag(r.Escalation_Level):'—'}</td>
+      <td>${r.Verification_Status?stTag(r.Verification_Status):'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('tableBadge').textContent = `${data.length} records`;
+}
+
+render();
+</script>
+</body>
+</html>
