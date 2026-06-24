@@ -244,6 +244,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="geodata.js"></script>
 <script>
 // ==========================================================================
@@ -334,6 +335,7 @@ Chart.defaults.font.size = 12;
 Chart.defaults.color = '#6b6560';
 Chart.defaults.plugins.legend.display = false;
 const PALETTE = ['#b53520','#2c5f8a','#c4851c','#2a7a6d','#6b4c9a','#d4764e','#3a7ca5','#8b6b3d'];
+Chart.register(ChartDataLabels);
 
 // ---- RENDER ----
 async function render() {
@@ -459,7 +461,7 @@ async function render() {
   new Chart(document.getElementById('violationChart'), {
     type: 'bar',
     data: { labels: violSorted.map(v=>v[0]), datasets: [{ data: violSorted.map(v=>v[1]), backgroundColor: PALETTE[0], borderRadius: 3, barThickness: 22, datalabels: { anchor: 'end', align: 'end', font: { weight: 600, size: 11 }, color: '#6b6560' } }] },
-    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, layout: { padding: { right: 30 }}, scales: { x:{display:false}, y:{grid:{display:false}, border:{display:false}} } }
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins: { tooltip: { enabled: false }}, layout: { padding: { right: 30 }}, scales: { x:{display:false}, y:{grid:{display:false}, border:{display:false}} } }
   });
 
   // Timeline
@@ -469,7 +471,7 @@ async function render() {
   new Chart(document.getElementById('timelineChart'), {
     type: 'line',
     data: { labels: monthKeys, datasets: [{ data: monthKeys.map(k=>monthly[k]), borderColor:PALETTE[1], backgroundColor:'rgba(44,95,138,0.08)', fill:true, tension:0.35, pointRadius:3, pointBackgroundColor:PALETTE[1] }] },
-    options: { responsive:true, maintainAspectRatio:false, scales: { x:{grid:{display:false},ticks:{maxTicksLimit:8}}, y:{grid:{color:'#eee'},beginAtZero:true,ticks:{stepSize:1}} } }
+    options: { responsive:true, maintainAspectRatio:false, plugins: { tooltip: { enabled: false }}, scales: { x:{grid:{display:false},ticks:{maxTicksLimit:8}}, y:{grid:{color:'#eee'},beginAtZero:true,ticks:{stepSize:1}} } }
   });
 
   // Perpetrators
@@ -478,8 +480,8 @@ async function render() {
   const perpSorted = Object.entries(perpCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
   new Chart(document.getElementById('perpetratorChart'), {
     type: 'bar',
-    data: { labels: perpSorted.map(v=>v[0]), datasets: [{ data: perpSorted.map(v=>v[1]), backgroundColor: PALETTE.slice(0,perpSorted.length), borderRadius:3, barThickness:22 }] },
-    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, scales: { x:{grid:{color:'#eee'},ticks:{stepSize:1}}, y:{grid:{display:false}} } }
+    data: { labels: perpSorted.map(v=>v[0]), datasets: [{ data: perpSorted.map(v=>v[1]), backgroundColor: PALETTE.slice(0,perpSorted.length), borderRadius:3, barThickness:22, datalabels: { anchor: 'end', align: 'end', font: { weight: 600, size: 11 }, color: '#6b6560' } }] },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins: { tooltip: { enabled: false }}, layout: { padding: { right: 30 }}, scales: { x:{display:false}, y:{grid:{display:false}, border:{display:false}} } }
   });
 
   // Religious identity doughnut
